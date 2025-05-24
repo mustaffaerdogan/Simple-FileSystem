@@ -265,3 +265,146 @@ void fs_rename(const char* eski_ad, const char* yeni_ad) {
     fclose(disk);
     printf("Hata: '%s' bulunamadı.\n", eski_ad);
 }
+
+void fs_append(const char* dosya_adi, const char* veri, int boyut) {
+    FILE* disk = fopen("disk.sim", "r+b");
+    if (!disk) return;
+
+    Metadata metadata;
+    fread(&metadata, sizeof(Metadata), 1, disk);
+
+    // Dosyayı metadata içinde ara
+    for (int i = 0; i < metadata.dosya_sayisi; i++) {
+        DosyaGirdisi* d = &metadata.dosyalar[i];
+        if (d->aktif_mi && strcmp(d->dosya_adi, dosya_adi) == 0) {
+            // Dosyanın sonuna git (başlangıç + mevcut boyut)
+            fseek(disk, d->baslangic_adresi + d->boyut, SEEK_SET);
+            
+            // Yeni veriyi dosyanın sonuna ekle
+            fwrite(veri, sizeof(char), boyut, disk);
+            fflush(disk);
+
+            // Dosya boyutunu güncelle
+            d->boyut += boyut;
+
+            // Metadata'yı güncelle
+            fseek(disk, 0, SEEK_SET);
+            fwrite(&metadata, sizeof(Metadata), 1, disk);
+            fflush(disk);
+
+            fclose(disk);
+            printf("'%s' dosyasına %d byte veri eklendi.\n", dosya_adi, boyut);
+            return;
+        }
+    }
+
+    fclose(disk);
+    printf("Hata: '%s' bulunamadı.\n", dosya_adi);
+}
+
+void fs_truncate(const char* dosya_adi, int yeni_boyut) {
+    FILE* disk = fopen("disk.sim", "r+b");
+    if (!disk) return;
+
+    Metadata metadata;
+    fread(&metadata, sizeof(Metadata), 1, disk);
+
+    // Dosyayı metadata içinde ara
+    for (int i = 0; i < metadata.dosya_sayisi; i++) {
+        DosyaGirdisi* d = &metadata.dosyalar[i];
+        if (d->aktif_mi && strcmp(d->dosya_adi, dosya_adi) == 0) {
+            int eski_boyut = d->boyut;
+            
+            if (yeni_boyut > eski_boyut) {
+                // Dosyayı büyütmek için sıfırlar ekle
+                fseek(disk, d->baslangic_adresi + eski_boyut, SEEK_SET);
+                
+                char sifir = 0;
+                for (int j = 0; j < (yeni_boyut - eski_boyut); j++) {
+                    fwrite(&sifir, sizeof(char), 1, disk);
+                }
+                fflush(disk);
+                
+                printf("'%s' dosyası %d byte'tan %d byte'a genişletildi.\n", 
+                       dosya_adi, eski_boyut, yeni_boyut);
+            } else if (yeni_boyut < eski_boyut) {
+                printf("'%s' dosyası %d byte'tan %d byte'a kısaltıldı.\n", 
+                       dosya_adi, eski_boyut, yeni_boyut);
+            } else {
+                printf("'%s' dosyası zaten %d byte boyutunda.\n", dosya_adi, yeni_boyut);
+            }
+
+            // Dosya boyutunu güncelle
+            d->boyut = yeni_boyut;
+
+            // Metadata'yı güncelle
+            fseek(disk, 0, SEEK_SET);
+            fwrite(&metadata, sizeof(Metadata), 1, disk);
+            fflush(disk);
+
+            fclose(disk);
+            return;
+        }
+    }
+
+    fclose(disk);
+    printf("Hata: '%s' bulunamadı.\n", dosya_adi);
+}
+
+void fs_copy(const char* kaynak_ad, const char* hedef_ad) {
+    // Önce hedef dosyanın zaten var olup olmadığını kontrol et
+    if (fs_exists(hedef_ad)) {
+        printf("Hata: '%s' adında bir dosya zaten var.\n", hedef_ad);
+        return;
+    }
+
+    // Kaynak dosyanın var olup olmadığını ve boyutunu kontrol et
+    if (!fs_exists(kaynak_ad)) {
+        printf("Hata: Kaynak dosya '%s' bulunamadı.\n", kaynak_ad);
+        return;
+    }
+
+    int kaynak_boyut = fs_size(kaynak_ad);
+    if (kaynak_boyut == -1 || kaynak_boyut == 0) {
+        printf("Hata: Kaynak dosya '%s' boş veya okunamıyor.\n", kaynak_ad);
+        return;
+    }
+
+    // Kaynak dosyayı oku
+    char* buffer = malloc(kaynak_boyut);
+    if (!buffer) {
+        printf("Hata: Bellek tahsis edilemedi.\n");
+        return;
+    }
+
+    FILE* disk = fopen("disk.sim", "rb");
+    if (!disk) {
+        free(buffer);
+        return;
+    }
+
+    Metadata metadata;
+    fread(&metadata, sizeof(Metadata), 1, disk);
+
+    // Kaynak dosyayı bul ve oku
+    for (int i = 0; i < metadata.dosya_sayisi; i++) {
+        if (metadata.dosyalar[i].aktif_mi && 
+            strcmp(metadata.dosyalar[i].dosya_adi, kaynak_ad) == 0) {
+            
+            fseek(disk, metadata.dosyalar[i].baslangic_adresi, SEEK_SET);
+            fread(buffer, sizeof(char), kaynak_boyut, disk);
+            break;
+        }
+    }
+    fclose(disk);
+
+    // Hedef dosyayı oluştur
+    fs_create(hedef_ad);
+
+    // Hedef dosyaya veriyi yaz
+    fs_write(hedef_ad, buffer, kaynak_boyut);
+
+    free(buffer);
+    printf("'%s' dosyası '%s' olarak kopyalandı (%d byte).\n", 
+           kaynak_ad, hedef_ad, kaynak_boyut);
+}

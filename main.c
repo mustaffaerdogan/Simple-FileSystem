@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "fs.h"
 
 int main() {
@@ -17,7 +18,9 @@ int main() {
         printf("9. Dosya Varlık Kontrolü (fs_exists)\n");
         printf("10. Dosya Boyutunu Öğren (fs_size)\n");
         printf("11. Dosya Adını Değiştir (fs_rename)\n");
-
+        printf("12. Dosyaya veri ekle (append)\n");
+        printf("13. Dosya içeriğini kes (truncate)\n");
+        printf("14. Dosyayı kopyala\n");
         printf("0. Çıkış\n");
         printf("Seçiminiz: ");
         scanf("%d", &secim);
@@ -78,12 +81,41 @@ int main() {
             scanf("%s", yeni);
             fs_rename(eski, yeni);
         }
-
-        
-        
-        
-        
-        
+        else if (secim == 12) {
+            // Dosyaya veri ekleme (append) işlemi
+            char ad[32], veri[1024];
+            printf("Veri eklenecek dosya adı: ");
+            scanf("%s", ad);
+            getchar();
+            printf("Eklenecek veri: ");
+            fgets(veri, sizeof(veri), stdin);
+            veri[strcspn(veri, "\n")] = '\0'; // \n karakterini temizle
+            fs_append(ad, veri, strlen(veri));
+        }
+        else if (secim == 13) {
+            // Dosya kesme (truncate) işlemi
+            char ad[32];
+            int yeni_boyut;
+            printf("Kesilecek dosya adı: ");
+            scanf("%s", ad);
+            printf("Yeni dosya boyutu (byte): ");
+            scanf("%d", &yeni_boyut);
+            
+            if (yeni_boyut < 0) {
+                printf("Hata: Dosya boyutu negatif olamaz.\n");
+            } else {
+                fs_truncate(ad, yeni_boyut);
+            }
+        }
+        else if (secim == 14) {
+            // Dosya kopyalama işlemi
+            char kaynak[32], hedef[32];
+            printf("Kaynak dosya adı: ");
+            scanf("%s", kaynak);
+            printf("Hedef dosya adı: ");
+            scanf("%s", hedef);
+            fs_copy(kaynak, hedef);
+        }
         else if (secim == 0) {
             printf("Çıkılıyor...\n");
             break;

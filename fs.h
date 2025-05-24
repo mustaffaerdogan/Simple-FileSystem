@@ -30,4 +30,9 @@ int fs_exists(const char* dosya_adi);
 int fs_size(const char* dosya_adi);
 void fs_rename(const char* eski_ad, const char* yeni_ad);
 
+// Veri manipülasyon fonksiyonları
+void fs_append(const char* dosya_adi, const char* veri, int boyut);
+void fs_truncate(const char* dosya_adi, int yeni_boyut);
+void fs_copy(const char* kaynak_ad, const char* hedef_ad);
+
 #endif
