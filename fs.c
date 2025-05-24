@@ -28,6 +28,9 @@ void fs_format() {
     fflush(disk);
     fclose(disk);
     printf("Disk formatlandı. Tüm dosyalar silindi.\n");
+    
+    // Loglama işlemi
+    fs_log("FORMAT", "disk.sim");
 }
 
 void fs_create(const char* dosya_adi) {
@@ -75,6 +78,9 @@ void fs_create(const char* dosya_adi) {
     fflush(disk);
     fclose(disk);
     printf("'%s' oluşturuldu.\n", dosya_adi);
+    
+    // Loglama işlemi
+    fs_log("CREATE", dosya_adi);
 }
 
 void fs_write(const char* dosya_adi, const char* veri, int boyut) {
@@ -99,6 +105,9 @@ void fs_write(const char* dosya_adi, const char* veri, int boyut) {
 
             fclose(disk);
             printf("'%s' dosyasına yazıldı.\n", dosya_adi);
+            
+            // Loglama işlemi
+            fs_log("WRITE", dosya_adi);
             return;
         }
     }
@@ -132,6 +141,11 @@ void fs_read(const char* dosya_adi, int offset, int boyut, char* buffer) {
 
             printf("Okunan veri: %s\n", buffer);
             fclose(disk);
+            
+            // Loglama işlemi
+            char log_mesaji[64];
+            snprintf(log_mesaji, sizeof(log_mesaji), "%s(offset:%d,size:%d)", dosya_adi, offset, boyut);
+            fs_log("READ", log_mesaji);
             return;
         }
     }
@@ -149,11 +163,18 @@ void fs_ls() {
     fclose(disk);
 
     printf("Mevcut dosyalar:\n");
+    int aktif_sayisi = 0;
     for (int i = 0; i < metadata.dosya_sayisi; i++) {
         if (metadata.dosyalar[i].aktif_mi) {
             printf("- %s (%d byte)\n", metadata.dosyalar[i].dosya_adi, metadata.dosyalar[i].boyut);
+            aktif_sayisi++;
         }
     }
+    
+    // Loglama işlemi
+    char log_mesaji[32];
+    snprintf(log_mesaji, sizeof(log_mesaji), "(%d files)", aktif_sayisi);
+    fs_log("LIST", log_mesaji);
 }
 
 void fs_delete(const char* dosya_adi) {
@@ -177,6 +198,9 @@ void fs_delete(const char* dosya_adi) {
             
             fclose(disk);
             printf("'%s' dosyası silindi.\n", dosya_adi);
+            
+            // Loglama işlemi
+            fs_log("DELETE", dosya_adi);
             return;
         }
     }
@@ -197,11 +221,19 @@ int fs_exists(const char* dosya_adi) {
         if (metadata.dosyalar[i].aktif_mi && 
             strcmp(metadata.dosyalar[i].dosya_adi, dosya_adi) == 0) {
             fclose(disk);
+            
+            // Loglama işlemi
+            fs_log("EXISTS", dosya_adi);
             return 1; // Dosya mevcut ve aktif
         }
     }
 
     fclose(disk);
+    
+    // Loglama işlemi (dosya bulunamadı)
+    char log_mesaji[64];
+    snprintf(log_mesaji, sizeof(log_mesaji), "%s(NOT_FOUND)", dosya_adi);
+    fs_log("EXISTS", log_mesaji);
     return 0; // Dosya bulunamadı veya aktif değil
 }
 
@@ -218,11 +250,21 @@ int fs_size(const char* dosya_adi) {
             strcmp(metadata.dosyalar[i].dosya_adi, dosya_adi) == 0) {
             int boyut = metadata.dosyalar[i].boyut;
             fclose(disk);
+            
+            // Loglama işlemi
+            char log_mesaji[64];
+            snprintf(log_mesaji, sizeof(log_mesaji), "%s(%d bytes)", dosya_adi, boyut);
+            fs_log("SIZE", log_mesaji);
             return boyut; // Dosya boyutunu döndür
         }
     }
 
     fclose(disk);
+    
+    // Loglama işlemi (dosya bulunamadı)
+    char log_mesaji[64];
+    snprintf(log_mesaji, sizeof(log_mesaji), "%s(NOT_FOUND)", dosya_adi);
+    fs_log("SIZE", log_mesaji);
     return -1; // Dosya bulunamadı
 }
 
@@ -258,6 +300,11 @@ void fs_rename(const char* eski_ad, const char* yeni_ad) {
             
             fclose(disk);
             printf("'%s' dosyası '%s' olarak yeniden adlandırıldı.\n", eski_ad, yeni_ad);
+            
+            // Loglama işlemi
+            char log_mesaji[128];
+            snprintf(log_mesaji, sizeof(log_mesaji), "%s->%s", eski_ad, yeni_ad);
+            fs_log("RENAME", log_mesaji);
             return;
         }
     }
@@ -294,6 +341,9 @@ void fs_append(const char* dosya_adi, const char* veri, int boyut) {
 
             fclose(disk);
             printf("'%s' dosyasına %d byte veri eklendi.\n", dosya_adi, boyut);
+            
+            // Loglama işlemi
+            fs_log("APPEND", dosya_adi);
             return;
         }
     }
@@ -343,6 +393,11 @@ void fs_truncate(const char* dosya_adi, int yeni_boyut) {
             fflush(disk);
 
             fclose(disk);
+            
+            // Loglama işlemi
+            char log_mesaji[64];
+            snprintf(log_mesaji, sizeof(log_mesaji), "%s(%d)", dosya_adi, yeni_boyut);
+            fs_log("TRUNCATE", log_mesaji);
             return;
         }
     }
@@ -407,6 +462,11 @@ void fs_copy(const char* kaynak_ad, const char* hedef_ad) {
     free(buffer);
     printf("'%s' dosyası '%s' olarak kopyalandı (%d byte).\n", 
            kaynak_ad, hedef_ad, kaynak_boyut);
+    
+    // Loglama işlemi
+    char log_mesaji[128];
+    snprintf(log_mesaji, sizeof(log_mesaji), "%s->%s", kaynak_ad, hedef_ad);
+    fs_log("COPY", log_mesaji);
 }
 
 void fs_backup(const char* yedek_dosya_adi) {
@@ -440,6 +500,9 @@ void fs_backup(const char* yedek_dosya_adi) {
     fclose(hedef);
 
     printf("Disk yedeği başarıyla alındı: '%s' (%d byte)\n", yedek_dosya_adi, toplam_byte);
+    
+    // Loglama işlemi
+    fs_log("BACKUP", yedek_dosya_adi);
 }
 
 void fs_restore(const char* yedek_dosya_adi) {
@@ -473,6 +536,9 @@ void fs_restore(const char* yedek_dosya_adi) {
     fclose(hedef);
 
     printf("Disk başarıyla geri yüklendi: '%s'den %d byte geri yüklendi\n", yedek_dosya_adi, toplam_byte);
+    
+    // Loglama işlemi
+    fs_log("RESTORE", yedek_dosya_adi);
 }
 
 void fs_check_integrity() {
@@ -537,6 +603,11 @@ void fs_check_integrity() {
         printf("✅ Tüm dosyalar tutarlı\n");
     }
     printf("=============================\n");
+    
+    // Loglama işlemi
+    char log_mesaji[64];
+    snprintf(log_mesaji, sizeof(log_mesaji), "(%d files, %s)", aktif_dosya_sayisi, hata_var ? "ERRORS" : "OK");
+    fs_log("CHECK_INTEGRITY", log_mesaji);
 }
 
 void fs_cat(const char* dosya_adi) {
@@ -557,6 +628,11 @@ void fs_cat(const char* dosya_adi) {
             if (d->boyut == 0) {
                 printf("Dosya boş.\n");
                 fclose(disk);
+                
+                // Loglama işlemi
+                char log_mesaji[64];
+                snprintf(log_mesaji, sizeof(log_mesaji), "%s(empty)", dosya_adi);
+                fs_log("CAT", log_mesaji);
                 return;
             }
 
@@ -579,6 +655,11 @@ void fs_cat(const char* dosya_adi) {
 
             free(buffer);
             fclose(disk);
+            
+            // Loglama işlemi
+            char log_mesaji[64];
+            snprintf(log_mesaji, sizeof(log_mesaji), "%s(%d bytes)", dosya_adi, d->boyut);
+            fs_log("CAT", log_mesaji);
             return;
         }
     }
@@ -586,6 +667,11 @@ void fs_cat(const char* dosya_adi) {
     // Dosya bulunamadı
     fclose(disk);
     printf("Hata: '%s' dosyası bulunamadı.\n", dosya_adi);
+    
+    // Loglama işlemi (dosya bulunamadı)
+    char log_mesaji[64];
+    snprintf(log_mesaji, sizeof(log_mesaji), "%s(NOT_FOUND)", dosya_adi);
+    fs_log("CAT", log_mesaji);
 }
 
 void fs_diff(const char* dosya1_adi, const char* dosya2_adi) {
@@ -617,11 +703,21 @@ void fs_diff(const char* dosya1_adi, const char* dosya2_adi) {
     if (!dosya1) {
         printf("Hata: '%s' dosyası bulunamadı.\n", dosya1_adi);
         fclose(disk);
+        
+        // Loglama işlemi
+        char log_mesaji[128];
+        snprintf(log_mesaji, sizeof(log_mesaji), "%s vs %s(FILE1_NOT_FOUND)", dosya1_adi, dosya2_adi);
+        fs_log("DIFF", log_mesaji);
         return;
     }
     if (!dosya2) {
         printf("Hata: '%s' dosyası bulunamadı.\n", dosya2_adi);
         fclose(disk);
+        
+        // Loglama işlemi
+        char log_mesaji[128];
+        snprintf(log_mesaji, sizeof(log_mesaji), "%s vs %s(FILE2_NOT_FOUND)", dosya1_adi, dosya2_adi);
+        fs_log("DIFF", log_mesaji);
         return;
     }
 
@@ -633,6 +729,11 @@ void fs_diff(const char* dosya1_adi, const char* dosya2_adi) {
         printf("Dosyalar farklı (boyut farkı: %d vs %d byte)\n", 
                dosya1->boyut, dosya2->boyut);
         fclose(disk);
+        
+        // Loglama işlemi
+        char log_mesaji[128];
+        snprintf(log_mesaji, sizeof(log_mesaji), "%s vs %s(SIZE_DIFF)", dosya1_adi, dosya2_adi);
+        fs_log("DIFF", log_mesaji);
         return;
     }
 
@@ -640,6 +741,11 @@ void fs_diff(const char* dosya1_adi, const char* dosya2_adi) {
     if (dosya1->boyut == 0) {
         printf("Dosyalar aynı (her ikisi de boş)\n");
         fclose(disk);
+        
+        // Loglama işlemi
+        char log_mesaji[128];
+        snprintf(log_mesaji, sizeof(log_mesaji), "%s vs %s(SAME_EMPTY)", dosya1_adi, dosya2_adi);
+        fs_log("DIFF", log_mesaji);
         return;
     }
 
@@ -674,11 +780,133 @@ void fs_diff(const char* dosya1_adi, const char* dosya2_adi) {
         }
     }
 
+    char log_mesaji[128];
     if (!fark_var) {
         printf("Dosyalar aynı\n");
+        snprintf(log_mesaji, sizeof(log_mesaji), "%s vs %s(SAME)", dosya1_adi, dosya2_adi);
+    } else {
+        snprintf(log_mesaji, sizeof(log_mesaji), "%s vs %s(DIFFERENT)", dosya1_adi, dosya2_adi);
     }
 
     free(buffer1);
     free(buffer2);
     fclose(disk);
+    
+    // Loglama işlemi
+    fs_log("DIFF", log_mesaji);
+}
+
+void fs_defragment() {
+    FILE* disk = fopen("disk.sim", "r+b");
+    if (!disk) {
+        printf("Hata: disk.sim dosyası açılamadı.\n");
+        return;
+    }
+
+    Metadata metadata;
+    fread(&metadata, sizeof(Metadata), 1, disk);
+
+    printf("Disk birleştirme işlemi başlıyor...\n");
+
+    // Aktif dosyaları topla ve içeriklerini oku
+    typedef struct {
+        DosyaGirdisi dosya_info;
+        char* icerik;
+    } DosyaVerisi;
+
+    DosyaVerisi aktif_dosyalar[MAX_FILES];
+    int aktif_sayisi = 0;
+
+    // Tüm aktif dosyaları bul ve içeriklerini oku
+    for (int i = 0; i < metadata.dosya_sayisi; i++) {
+        if (metadata.dosyalar[i].aktif_mi) {
+            aktif_dosyalar[aktif_sayisi].dosya_info = metadata.dosyalar[i];
+            
+            // Dosya içeriğini oku
+            if (metadata.dosyalar[i].boyut > 0) {
+                aktif_dosyalar[aktif_sayisi].icerik = malloc(metadata.dosyalar[i].boyut);
+                if (!aktif_dosyalar[aktif_sayisi].icerik) {
+                    printf("Hata: Bellek tahsis edilemedi.\n");
+                    fclose(disk);
+                    return;
+                }
+                
+                fseek(disk, metadata.dosyalar[i].baslangic_adresi, SEEK_SET);
+                fread(aktif_dosyalar[aktif_sayisi].icerik, 1, metadata.dosyalar[i].boyut, disk);
+            } else {
+                aktif_dosyalar[aktif_sayisi].icerik = NULL;
+            }
+            
+            aktif_sayisi++;
+        }
+    }
+
+    printf("Toplam %d aktif dosya bulundu.\n", aktif_sayisi);
+
+    // Dosyaları yeniden yazma - METADATA_SIZE'den başlayarak ardışık şekilde
+    int yeni_adres = METADATA_SIZE;
+    
+    for (int i = 0; i < aktif_sayisi; i++) {
+        // Yeni başlangıç adresini güncelle
+        aktif_dosyalar[i].dosya_info.baslangic_adresi = yeni_adres;
+        
+        // Dosya içeriğini yeni konuma yaz
+        if (aktif_dosyalar[i].dosya_info.boyut > 0) {
+            fseek(disk, yeni_adres, SEEK_SET);
+            fwrite(aktif_dosyalar[i].icerik, 1, aktif_dosyalar[i].dosya_info.boyut, disk);
+            
+            printf("'%s' dosyası %d adresine taşındı (%d byte)\n", 
+                   aktif_dosyalar[i].dosya_info.dosya_adi, 
+                   yeni_adres, 
+                   aktif_dosyalar[i].dosya_info.boyut);
+        }
+        
+        // Bir sonraki dosya için adresi hesapla
+        yeni_adres += aktif_dosyalar[i].dosya_info.boyut;
+        
+        // Belleği temizle
+        if (aktif_dosyalar[i].icerik) {
+            free(aktif_dosyalar[i].icerik);
+        }
+    }
+
+    // Metadata'yı güncelle - sadece aktif dosyaları koru
+    Metadata yeni_metadata = {0};
+    yeni_metadata.dosya_sayisi = aktif_sayisi;
+    
+    for (int i = 0; i < aktif_sayisi; i++) {
+        yeni_metadata.dosyalar[i] = aktif_dosyalar[i].dosya_info;
+    }
+
+    // Yeni metadata'yı diske yaz
+    fseek(disk, 0, SEEK_SET);
+    fwrite(&yeni_metadata, sizeof(Metadata), 1, disk);
+    fflush(disk);
+
+    fclose(disk);
+    
+    printf("Disk birleştirme tamamlandı! %d dosya ardışık olarak yerleştirildi.\n", aktif_sayisi);
+    printf("Toplam kullanılan alan: %d byte (metadata hariç)\n", yeni_adres - METADATA_SIZE);
+    
+    // Loglama işlemi
+    fs_log("DEFRAGMENT", "disk.sim");
+}
+
+void fs_log(const char* islem_adi, const char* hedef) {
+    // Log dosyasını ekleme modunda aç
+    FILE* log_dosyasi = fopen("fs_log.txt", "a");
+    if (!log_dosyasi) {
+        printf("Uyarı: Log dosyası oluşturulamadı.\n");
+        return;
+    }
+
+    // Basit zaman damgası için sistem saati kullan (alternatif: fake timestamp)
+    // Burada basit bir sayaç veya sabit format kullanıyoruz
+    static int log_sayaci = 1;
+    
+    // Log satırını yaz
+    fprintf(log_dosyasi, "[LOG #%d] %s %s\n", log_sayaci++, islem_adi, hedef);
+    fflush(log_dosyasi);
+    
+    fclose(log_dosyasi);
 }

@@ -1,0 +1,10 @@
+[LOG #1] DEFRAGMENT disk.sim
+[LOG #2] DEFRAGMENT disk.sim
+[LOG #1] FORMAT disk.sim
+[LOG #2] CREATE rapor.txt
+[LOG #3] LIST (1 files)
+[LOG #1] FORMAT disk.sim
+[LOG #1] FORMAT disk.sim
+[LOG #2] RESTORE yedek.sim
+[LOG #3] LIST (3 files)
+[LOG #4] FORMAT disk.sim

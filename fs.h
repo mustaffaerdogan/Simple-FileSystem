@@ -44,4 +44,8 @@ void fs_check_integrity();
 void fs_cat(const char* dosya_adi);
 void fs_diff(const char* dosya1_adi, const char* dosya2_adi);
 
+// Yardımcı fonksiyonlar
+void fs_defragment();
+void fs_log(const char* islem_adi, const char* hedef);
+
 #endif

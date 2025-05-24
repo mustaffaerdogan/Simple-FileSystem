@@ -26,6 +26,8 @@ int main() {
         printf("17. Disk Tutarlılığını Kontrol Et (fs_check_integrity)\n");
         printf("18. Dosya İçeriğini Göster (fs_cat)\n");
         printf("19. İki Dosyayı Karşılaştır (fs_diff)\n");
+        printf("20. Diski Birleştir (fs_defragment)\n");
+        printf("21. Logları Görüntüle (fs_log.txt içeriğini oku)\n");
         printf("0. Çıkış\n");
         printf("Seçiminiz: ");
         scanf("%d", &secim);
@@ -162,6 +164,43 @@ int main() {
             printf("İkinci dosya adı: ");
             scanf("%s", dosya2);
             fs_diff(dosya1, dosya2);
+        }
+        else if (secim == 20) {
+            // Disk birleştirme işlemi
+            printf("DİKKAT: Bu işlem tüm dosyaları yeniden düzenleyecek!\n");
+            printf("Devam etmek istiyor musunuz? (e/h): ");
+            char onay;
+            scanf(" %c", &onay);
+            
+            if (onay == 'e' || onay == 'E') {
+                fs_defragment();
+            } else {
+                printf("Disk birleştirme işlemi iptal edildi.\n");
+            }
+        }
+        else if (secim == 21) {
+            // Log dosyasını görüntüleme işlemi
+            FILE* log_dosyasi = fopen("fs_log.txt", "r");
+            if (!log_dosyasi) {
+                printf("Log dosyası bulunamadı veya henüz oluşturulmamış.\n");
+            } else {
+                printf("\n=== fs_log.txt İçeriği ===\n");
+                char satir[256];
+                int satir_sayisi = 0;
+                
+                while (fgets(satir, sizeof(satir), log_dosyasi)) {
+                    printf("%s", satir); // fgets zaten \n içerir
+                    satir_sayisi++;
+                }
+                
+                if (satir_sayisi == 0) {
+                    printf("Log dosyası boş.\n");
+                } else {
+                    printf("=== Toplam %d log kaydı ===\n", satir_sayisi);
+                }
+                
+                fclose(log_dosyasi);
+            }
         }
         else if (secim == 0) {
             printf("Çıkılıyor...\n");
