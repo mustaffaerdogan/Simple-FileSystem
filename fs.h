@@ -40,4 +40,8 @@ void fs_backup(const char* yedek_dosya_adi);
 void fs_restore(const char* yedek_dosya_adi);
 void fs_check_integrity();
 
+// Kullanıcı arayüzü fonksiyonları
+void fs_cat(const char* dosya_adi);
+void fs_diff(const char* dosya1_adi, const char* dosya2_adi);
+
 #endif

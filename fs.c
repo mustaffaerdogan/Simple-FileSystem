@@ -538,3 +538,147 @@ void fs_check_integrity() {
     }
     printf("=============================\n");
 }
+
+void fs_cat(const char* dosya_adi) {
+    FILE* disk = fopen("disk.sim", "rb");
+    if (!disk) {
+        printf("Hata: disk.sim dosyası açılamadı.\n");
+        return;
+    }
+
+    Metadata metadata;
+    fread(&metadata, sizeof(Metadata), 1, disk);
+
+    // Dosyayı metadata içinde ara
+    for (int i = 0; i < metadata.dosya_sayisi; i++) {
+        DosyaGirdisi* d = &metadata.dosyalar[i];
+        if (d->aktif_mi && strcmp(d->dosya_adi, dosya_adi) == 0) {
+            // Dosya bulundu, içeriğini oku ve göster
+            if (d->boyut == 0) {
+                printf("Dosya boş.\n");
+                fclose(disk);
+                return;
+            }
+
+            // Dosya içeriği için bellek ayır
+            char* buffer = malloc(d->boyut + 1);
+            if (!buffer) {
+                printf("Hata: Bellek tahsis edilemedi.\n");
+                fclose(disk);
+                return;
+            }
+
+            // Dosya başlangıç adresine git ve içeriği oku
+            fseek(disk, d->baslangic_adresi, SEEK_SET);
+            fread(buffer, sizeof(char), d->boyut, disk);
+            buffer[d->boyut] = '\0'; // Null terminator ekle
+
+            printf("\n=== '%s' dosyasının içeriği (%d byte) ===\n", dosya_adi, d->boyut);
+            printf("%s\n", buffer);
+            printf("=== Dosya sonu ===\n");
+
+            free(buffer);
+            fclose(disk);
+            return;
+        }
+    }
+
+    // Dosya bulunamadı
+    fclose(disk);
+    printf("Hata: '%s' dosyası bulunamadı.\n", dosya_adi);
+}
+
+void fs_diff(const char* dosya1_adi, const char* dosya2_adi) {
+    FILE* disk = fopen("disk.sim", "rb");
+    if (!disk) {
+        printf("Hata: disk.sim dosyası açılamadı.\n");
+        return;
+    }
+
+    Metadata metadata;
+    fread(&metadata, sizeof(Metadata), 1, disk);
+
+    DosyaGirdisi* dosya1 = NULL;
+    DosyaGirdisi* dosya2 = NULL;
+
+    // Her iki dosyayı da metadata içinde ara
+    for (int i = 0; i < metadata.dosya_sayisi; i++) {
+        if (metadata.dosyalar[i].aktif_mi) {
+            if (strcmp(metadata.dosyalar[i].dosya_adi, dosya1_adi) == 0) {
+                dosya1 = &metadata.dosyalar[i];
+            }
+            if (strcmp(metadata.dosyalar[i].dosya_adi, dosya2_adi) == 0) {
+                dosya2 = &metadata.dosyalar[i];
+            }
+        }
+    }
+
+    // Dosyaların varlığını kontrol et
+    if (!dosya1) {
+        printf("Hata: '%s' dosyası bulunamadı.\n", dosya1_adi);
+        fclose(disk);
+        return;
+    }
+    if (!dosya2) {
+        printf("Hata: '%s' dosyası bulunamadı.\n", dosya2_adi);
+        fclose(disk);
+        return;
+    }
+
+    printf("Karşılaştırılıyor: '%s' (%d byte) vs '%s' (%d byte)\n", 
+           dosya1_adi, dosya1->boyut, dosya2_adi, dosya2->boyut);
+
+    // Önce boyutları karşılaştır
+    if (dosya1->boyut != dosya2->boyut) {
+        printf("Dosyalar farklı (boyut farkı: %d vs %d byte)\n", 
+               dosya1->boyut, dosya2->boyut);
+        fclose(disk);
+        return;
+    }
+
+    // Boyutlar aynıysa içeriği byte-by-byte karşılaştır
+    if (dosya1->boyut == 0) {
+        printf("Dosyalar aynı (her ikisi de boş)\n");
+        fclose(disk);
+        return;
+    }
+
+    // Her iki dosyanın içeriğini oku
+    char* buffer1 = malloc(dosya1->boyut);
+    char* buffer2 = malloc(dosya2->boyut);
+    
+    if (!buffer1 || !buffer2) {
+        printf("Hata: Bellek tahsis edilemedi.\n");
+        if (buffer1) free(buffer1);
+        if (buffer2) free(buffer2);
+        fclose(disk);
+        return;
+    }
+
+    // İlk dosyayı oku
+    fseek(disk, dosya1->baslangic_adresi, SEEK_SET);
+    fread(buffer1, sizeof(char), dosya1->boyut, disk);
+
+    // İkinci dosyayı oku
+    fseek(disk, dosya2->baslangic_adresi, SEEK_SET);
+    fread(buffer2, sizeof(char), dosya2->boyut, disk);
+
+    // Byte-by-byte karşılaştırma
+    int fark_var = 0;
+    for (int i = 0; i < dosya1->boyut; i++) {
+        if (buffer1[i] != buffer2[i]) {
+            fark_var = 1;
+            printf("Dosyalar farklı (ilk fark %d. byte'ta: 0x%02x vs 0x%02x)\n", 
+                   i + 1, (unsigned char)buffer1[i], (unsigned char)buffer2[i]);
+            break;
+        }
+    }
+
+    if (!fark_var) {
+        printf("Dosyalar aynı\n");
+    }
+
+    free(buffer1);
+    free(buffer2);
+    fclose(disk);
+}

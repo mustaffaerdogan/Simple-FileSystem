@@ -24,6 +24,8 @@ int main() {
         printf("15. Disk Yedeğini Al (fs_backup)\n");
         printf("16. Yedekten Geri Yükle (fs_restore)\n");
         printf("17. Disk Tutarlılığını Kontrol Et (fs_check_integrity)\n");
+        printf("18. Dosya İçeriğini Göster (fs_cat)\n");
+        printf("19. İki Dosyayı Karşılaştır (fs_diff)\n");
         printf("0. Çıkış\n");
         printf("Seçiminiz: ");
         scanf("%d", &secim);
@@ -144,6 +146,22 @@ int main() {
         else if (secim == 17) {
             // Disk tutarlılık kontrolü
             fs_check_integrity();
+        }
+        else if (secim == 18) {
+            // Dosya içeriğini gösterme işlemi
+            char ad[32];
+            printf("İçeriği gösterilecek dosya adı: ");
+            scanf("%s", ad);
+            fs_cat(ad);
+        }
+        else if (secim == 19) {
+            // İki dosyayı karşılaştırma işlemi
+            char dosya1[32], dosya2[32];
+            printf("Birinci dosya adı: ");
+            scanf("%s", dosya1);
+            printf("İkinci dosya adı: ");
+            scanf("%s", dosya2);
+            fs_diff(dosya1, dosya2);
         }
         else if (secim == 0) {
             printf("Çıkılıyor...\n");
