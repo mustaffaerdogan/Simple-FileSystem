@@ -155,3 +155,113 @@ void fs_ls() {
         }
     }
 }
+
+void fs_delete(const char* dosya_adi) {
+    FILE* disk = fopen("disk.sim", "r+b");
+    if (!disk) return;
+
+    Metadata metadata;
+    fread(&metadata, sizeof(Metadata), 1, disk);
+
+    // Dosyayı metadata içinde ara
+    for (int i = 0; i < metadata.dosya_sayisi; i++) {
+        DosyaGirdisi* d = &metadata.dosyalar[i];
+        if (d->aktif_mi && strcmp(d->dosya_adi, dosya_adi) == 0) {
+            // Dosyayı pasif hale getir
+            d->aktif_mi = 0;
+            
+            // Metadata'yı güncelle
+            fseek(disk, 0, SEEK_SET);
+            fwrite(&metadata, sizeof(Metadata), 1, disk);
+            fflush(disk);
+            
+            fclose(disk);
+            printf("'%s' dosyası silindi.\n", dosya_adi);
+            return;
+        }
+    }
+
+    fclose(disk);
+    printf("Hata: '%s' bulunamadı.\n", dosya_adi);
+}
+
+int fs_exists(const char* dosya_adi) {
+    FILE* disk = fopen("disk.sim", "rb");
+    if (!disk) return 0;
+
+    Metadata metadata;
+    fread(&metadata, sizeof(Metadata), 1, disk);
+
+    // Dosyayı metadata içinde ara
+    for (int i = 0; i < metadata.dosya_sayisi; i++) {
+        if (metadata.dosyalar[i].aktif_mi && 
+            strcmp(metadata.dosyalar[i].dosya_adi, dosya_adi) == 0) {
+            fclose(disk);
+            return 1; // Dosya mevcut ve aktif
+        }
+    }
+
+    fclose(disk);
+    return 0; // Dosya bulunamadı veya aktif değil
+}
+
+int fs_size(const char* dosya_adi) {
+    FILE* disk = fopen("disk.sim", "rb");
+    if (!disk) return -1;
+
+    Metadata metadata;
+    fread(&metadata, sizeof(Metadata), 1, disk);
+
+    // Dosyayı metadata içinde ara
+    for (int i = 0; i < metadata.dosya_sayisi; i++) {
+        if (metadata.dosyalar[i].aktif_mi && 
+            strcmp(metadata.dosyalar[i].dosya_adi, dosya_adi) == 0) {
+            int boyut = metadata.dosyalar[i].boyut;
+            fclose(disk);
+            return boyut; // Dosya boyutunu döndür
+        }
+    }
+
+    fclose(disk);
+    return -1; // Dosya bulunamadı
+}
+
+void fs_rename(const char* eski_ad, const char* yeni_ad) {
+    FILE* disk = fopen("disk.sim", "r+b");
+    if (!disk) return;
+
+    Metadata metadata;
+    fread(&metadata, sizeof(Metadata), 1, disk);
+
+    // Yeni adın zaten kullanılıp kullanılmadığını kontrol et
+    for (int i = 0; i < metadata.dosya_sayisi; i++) {
+        if (metadata.dosyalar[i].aktif_mi && 
+            strcmp(metadata.dosyalar[i].dosya_adi, yeni_ad) == 0) {
+            printf("Hata: '%s' adında bir dosya zaten var.\n", yeni_ad);
+            fclose(disk);
+            return;
+        }
+    }
+
+    // Eski dosyayı bul ve adını değiştir
+    for (int i = 0; i < metadata.dosya_sayisi; i++) {
+        DosyaGirdisi* d = &metadata.dosyalar[i];
+        if (d->aktif_mi && strcmp(d->dosya_adi, eski_ad) == 0) {
+            // Dosya adını güncelle
+            strncpy(d->dosya_adi, yeni_ad, MAX_FILENAME_LENGTH);
+            d->dosya_adi[MAX_FILENAME_LENGTH - 1] = '\0'; // Null terminator güvenliği
+            
+            // Metadata'yı güncelle
+            fseek(disk, 0, SEEK_SET);
+            fwrite(&metadata, sizeof(Metadata), 1, disk);
+            fflush(disk);
+            
+            fclose(disk);
+            printf("'%s' dosyası '%s' olarak yeniden adlandırıldı.\n", eski_ad, yeni_ad);
+            return;
+        }
+    }
+
+    fclose(disk);
+    printf("Hata: '%s' bulunamadı.\n", eski_ad);
+}

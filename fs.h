@@ -24,4 +24,10 @@ void fs_write(const char* dosya_adi, const char* veri, int boyut);
 void fs_read(const char* dosya_adi, int offset, int boyut, char* buffer);
 void fs_ls();
 
+// Yeni dosya yönetim fonksiyonları
+void fs_delete(const char* dosya_adi);
+int fs_exists(const char* dosya_adi);
+int fs_size(const char* dosya_adi);
+void fs_rename(const char* eski_ad, const char* yeni_ad);
+
 #endif
