@@ -1,24 +1,27 @@
 #ifndef FS_H
 #define FS_H
 
-#define MAX_FILES 128             // Maksimum dosya sayısı
-#define MAX_FILENAME_LENGTH 32    // Maksimum dosya adı uzunluğu
-#define BLOCK_SIZE 512            // Veri bloğu boyutu (byte)
-#define DISK_SIZE (1024 * 1024)   // Sanal disk boyutu (1 MB)
-#define METADATA_SIZE (4 * 1024)  // Metadata alanı boyutu (4 KB)
+#define MAX_FILES 128
+#define MAX_FILENAME_LENGTH 32
+#define METADATA_SIZE 6144
+#define BLOCK_SIZE 512
 
-// Dosya bilgilerini tutan yapı
 typedef struct {
     char dosya_adi[MAX_FILENAME_LENGTH];
-    int baslangic_adresi;
     int boyut;
-    int aktif_mi; // 1: aktif, 0: silinmiş
+    int baslangic_adresi;
+    int aktif_mi;
 } DosyaGirdisi;
 
-// Dosya sistemi metadata yapısı
 typedef struct {
     int dosya_sayisi;
     DosyaGirdisi dosyalar[MAX_FILES];
 } Metadata;
+
+void fs_format();
+void fs_create(const char* dosya_adi);
+void fs_write(const char* dosya_adi, const char* veri, int boyut);
+void fs_read(const char* dosya_adi, int offset, int boyut, char* buffer);
+void fs_ls();
 
 #endif

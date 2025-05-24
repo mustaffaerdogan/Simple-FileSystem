@@ -4,43 +4,48 @@
 #include "fs.h"
 
 void fs_format() {
-    FILE* disk = fopen("disk.sim", "r+b");
+    FILE* disk = fopen("disk.sim", "w+b");
     if (disk == NULL) {
-        // Dosya yoksa oluştur
-        disk = fopen("disk.sim", "w+b");
-        if (disk == NULL) {
-            perror("disk.sim oluşturulamadı");
-            return;
-        }
+        perror("disk.sim oluşturulamadı");
+        return;
     }
 
-    // Metadata'yı sıfırla
-    Metadata metadata;
-    metadata.dosya_sayisi = 0;
-    memset(metadata.dosyalar, 0, sizeof(metadata.dosyalar));
+    // Debug: Print actual structure sizes
+    printf("DEBUG: sizeof(Metadata) = %zu bytes\n", sizeof(Metadata));
+    printf("DEBUG: METADATA_SIZE = %d bytes\n", METADATA_SIZE);
+    printf("DEBUG: sizeof(DosyaGirdisi) = %zu bytes\n", sizeof(DosyaGirdisi));
 
-    // Diskin başına yaz (ilk 4 KB)
+    // Initialize metadata
+    Metadata metadata = {0};
     fseek(disk, 0, SEEK_SET);
     fwrite(&metadata, sizeof(Metadata), 1, disk);
-
-    printf("Disk formatlandı. Tüm dosyalar silindi.\n");
-
+    
+    // Properly allocate the data region by writing zeros
+    // This ensures the entire file is actually allocated on disk
+    char zero_block[BLOCK_SIZE];
+    memset(zero_block, 0, BLOCK_SIZE);
+    
+    // Write zeros for the entire data region (1000 blocks)
+    for (int i = 0; i < 1000; i++) {
+        fwrite(zero_block, 1, BLOCK_SIZE, disk);
+    }
+    
+    fflush(disk);
     fclose(disk);
+    printf("Disk formatlandı. Tüm dosyalar silindi.\n");
 }
 
 void fs_create(const char* dosya_adi) {
     FILE* disk = fopen("disk.sim", "r+b");
-    if (disk == NULL) {
-        printf("disk.sim dosyası açılamadı.\n");
-        return;
-    }
+    if (!disk) return;
 
     Metadata metadata;
     fread(&metadata, sizeof(Metadata), 1, disk);
 
     for (int i = 0; i < metadata.dosya_sayisi; i++) {
-        if (metadata.dosyalar[i].aktif_mi && strcmp(metadata.dosyalar[i].dosya_adi, dosya_adi) == 0) {
-            printf("Hata: '%s' adlı dosya zaten var.\n", dosya_adi);
+        if (metadata.dosyalar[i].aktif_mi &&
+            strcmp(metadata.dosyalar[i].dosya_adi, dosya_adi) == 0) {
+            printf("Hata: '%s' zaten var.\n", dosya_adi);
             fclose(disk);
             return;
         }
@@ -52,103 +57,34 @@ void fs_create(const char* dosya_adi) {
         return;
     }
 
-    DosyaGirdisi yeni;
+    DosyaGirdisi yeni = {0};
     strncpy(yeni.dosya_adi, dosya_adi, MAX_FILENAME_LENGTH);
-    yeni.boyut = 0;
     yeni.aktif_mi = 1;
+    yeni.boyut = 0;
 
-    // Kullanılacak ilk boş adresi hesapla
     int son_adres = METADATA_SIZE;
     for (int i = 0; i < metadata.dosya_sayisi; i++) {
         if (metadata.dosyalar[i].aktif_mi) {
-            int bitis = metadata.dosyalar[i].baslangic_adresi + metadata.dosyalar[i].boyut;
-            if (bitis > son_adres) {
+            int bitis = metadata.dosyalar[i].baslangic_adresi +
+                        (metadata.dosyalar[i].boyut > 0 ? metadata.dosyalar[i].boyut : BLOCK_SIZE);
+            if (bitis > son_adres)
                 son_adres = bitis;
-            }
         }
     }
-    yeni.baslangic_adresi = son_adres;
 
+    yeni.baslangic_adresi = son_adres;
     metadata.dosyalar[metadata.dosya_sayisi++] = yeni;
 
     fseek(disk, 0, SEEK_SET);
     fwrite(&metadata, sizeof(Metadata), 1, disk);
     fflush(disk);
-
-    printf("'%s' adlı dosya oluşturuldu.\n", dosya_adi);
     fclose(disk);
-}
-
-
-
-
-void fs_ls() {
-    FILE* disk = fopen("disk.sim", "rb");
-    if (disk == NULL) {
-        printf("disk.sim dosyası açılamadı.\n");
-        return;
-    }
-
-    Metadata metadata;
-    fseek(disk, 0, SEEK_SET);
-    fread(&metadata, sizeof(Metadata), 1, disk);
-    fclose(disk);
-
-    if (metadata.dosya_sayisi == 0) {
-        printf("Hiç dosya bulunamadı.\n");
-        return;
-    }
-
-    printf("Mevcut dosyalar:\n");
-    for (int i = 0; i < metadata.dosya_sayisi; i++) {
-        if (metadata.dosyalar[i].aktif_mi == 1) {
-            printf("- %s (%d byte)\n",
-                   metadata.dosyalar[i].dosya_adi,
-                   metadata.dosyalar[i].boyut);
-        }
-    }
-}
-
-void fs_delete(const char* dosya_adi) {
-    FILE* disk = fopen("disk.sim", "r+b");
-    if (disk == NULL) {
-        printf("disk.sim dosyası açılamadı.\n");
-        return;
-    }
-
-    Metadata metadata;
-    fseek(disk, 0, SEEK_SET);
-    fread(&metadata, sizeof(Metadata), 1, disk);
-
-    int bulundu = 0;
-
-    for (int i = 0; i < metadata.dosya_sayisi; i++) {
-        if (metadata.dosyalar[i].aktif_mi == 1 &&
-            strcmp(metadata.dosyalar[i].dosya_adi, dosya_adi) == 0) {
-
-            metadata.dosyalar[i].aktif_mi = 0; // Silindi olarak işaretle
-            bulundu = 1;
-            break;
-        }
-    }
-
-    if (bulundu) {
-        fseek(disk, 0, SEEK_SET);
-        fwrite(&metadata, sizeof(Metadata), 1, disk);
-        printf("'%s' adlı dosya silindi.\n", dosya_adi);
-    } else {
-        printf("Hata: '%s' adlı dosya bulunamadı.\n", dosya_adi);
-    }
-
-    fclose(disk);
+    printf("'%s' oluşturuldu.\n", dosya_adi);
 }
 
 void fs_write(const char* dosya_adi, const char* veri, int boyut) {
     FILE* disk = fopen("disk.sim", "r+b");
-    if (disk == NULL) {
-        printf("disk.sim dosyası açılamadı.\n");
-        return;
-    }
+    if (!disk) return;
 
     Metadata metadata;
     fread(&metadata, sizeof(Metadata), 1, disk);
@@ -156,33 +92,36 @@ void fs_write(const char* dosya_adi, const char* veri, int boyut) {
     for (int i = 0; i < metadata.dosya_sayisi; i++) {
         DosyaGirdisi* d = &metadata.dosyalar[i];
         if (d->aktif_mi && strcmp(d->dosya_adi, dosya_adi) == 0) {
+            printf("DEBUG: Yazma konumu: %d\n", d->baslangic_adresi);
+            printf("DEBUG: Yazılacak veri: '%s' (%d byte)\n", veri, boyut);
+            
             fseek(disk, d->baslangic_adresi, SEEK_SET);
-            fwrite(veri, sizeof(char), boyut, disk);
+            long pos = ftell(disk);
+            printf("DEBUG: Güncel dosya konumu: %ld\n", pos);
+            
+            size_t yazilan = fwrite(veri, sizeof(char), boyut, disk);
+            printf("DEBUG: Yazılan byte sayısı: %zu / %d\n", yazilan, boyut);
             fflush(disk);
 
             d->boyut = boyut;
+
             fseek(disk, 0, SEEK_SET);
             fwrite(&metadata, sizeof(Metadata), 1, disk);
             fflush(disk);
 
-            printf("'%s' adlı dosyaya %d byte veri yazıldı.\n", dosya_adi, boyut);
             fclose(disk);
+            printf("'%s' dosyasına yazıldı.\n", dosya_adi);
             return;
         }
     }
 
-    printf("Hata: '%s' adlı dosya bulunamadı.\n", dosya_adi);
     fclose(disk);
+    printf("Hata: '%s' bulunamadı.\n", dosya_adi);
 }
-
-
 
 void fs_read(const char* dosya_adi, int offset, int boyut, char* buffer) {
     FILE* disk = fopen("disk.sim", "rb");
-    if (disk == NULL) {
-        printf("disk.sim dosyası açılamadı.\n");
-        return;
-    }
+    if (!disk) return;
 
     Metadata metadata;
     fread(&metadata, sizeof(Metadata), 1, disk);
@@ -190,39 +129,57 @@ void fs_read(const char* dosya_adi, int offset, int boyut, char* buffer) {
     for (int i = 0; i < metadata.dosya_sayisi; i++) {
         DosyaGirdisi* d = &metadata.dosyalar[i];
         if (d->aktif_mi && strcmp(d->dosya_adi, dosya_adi) == 0) {
-
+            printf("DEBUG: Dosya başlangıç adresi: %d\n", d->baslangic_adresi);
+            printf("DEBUG: Dosya boyutu: %d\n", d->boyut);
+            printf("DEBUG: Okuma offset: %d, boyut: %d\n", offset, boyut);
+            
             if (offset > d->boyut) {
-                printf("Hata: Offset dosya boyutunu aşıyor.\n");
+                printf("Offset dosya boyutunu aşıyor.\n");
                 fclose(disk);
                 return;
             }
 
-            if (offset + boyut > d->boyut) {
-                boyut = d->boyut - offset;  // Kalan kadar oku
-            }
+            if (offset + boyut > d->boyut)
+                boyut = d->boyut - offset;
 
+            printf("DEBUG: Düzeltilmiş okuma boyutu: %d\n", boyut);
+            
             fseek(disk, d->baslangic_adresi + offset, SEEK_SET);
-            fread(buffer, sizeof(char), boyut, disk);
-            buffer[boyut] = '\0';  // null karakter ile sonlandır
+            long pos = ftell(disk);
+            printf("DEBUG: Okuma konumu: %ld\n", pos);
+            
+            size_t okunan = fread(buffer, sizeof(char), boyut, disk);
+            printf("DEBUG: Okunan byte sayısı: %zu\n", okunan);
+            buffer[boyut] = '\0';
 
-            // 🔍 Debug: Okunan veriyi hex formatında yazdır
-            printf("Okunan veri (hex): ");
+            printf("DEBUG: Ham buffer içeriği (hex): ");
             for (int j = 0; j < boyut; j++) {
-                printf("%02X ", (unsigned char)buffer[j]);
+                printf("%02x ", (unsigned char)buffer[j]);
             }
             printf("\n");
 
-            // 🟢 Okunan string çıktısı
-            printf("Okunan veri (string): %s\n", buffer);
-
+            printf("Okunan veri: %s\n", buffer);
             fclose(disk);
             return;
         }
     }
 
-    printf("Hata: '%s' adlı dosya bulunamadı.\n", dosya_adi);
     fclose(disk);
+    printf("Hata: '%s' bulunamadı.\n", dosya_adi);
 }
 
+void fs_ls() {
+    FILE* disk = fopen("disk.sim", "rb");
+    if (!disk) return;
 
+    Metadata metadata;
+    fread(&metadata, sizeof(Metadata), 1, disk);
+    fclose(disk);
 
+    printf("Mevcut dosyalar:\n");
+    for (int i = 0; i < metadata.dosya_sayisi; i++) {
+        if (metadata.dosyalar[i].aktif_mi) {
+            printf("- %s (%d byte)\n", metadata.dosyalar[i].dosya_adi, metadata.dosyalar[i].boyut);
+        }
+    }
+}
