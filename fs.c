@@ -10,11 +10,6 @@ void fs_format() {
         return;
     }
 
-    // Debug: Print actual structure sizes
-    printf("DEBUG: sizeof(Metadata) = %zu bytes\n", sizeof(Metadata));
-    printf("DEBUG: METADATA_SIZE = %d bytes\n", METADATA_SIZE);
-    printf("DEBUG: sizeof(DosyaGirdisi) = %zu bytes\n", sizeof(DosyaGirdisi));
-
     // Initialize metadata
     Metadata metadata = {0};
     fseek(disk, 0, SEEK_SET);
@@ -92,15 +87,8 @@ void fs_write(const char* dosya_adi, const char* veri, int boyut) {
     for (int i = 0; i < metadata.dosya_sayisi; i++) {
         DosyaGirdisi* d = &metadata.dosyalar[i];
         if (d->aktif_mi && strcmp(d->dosya_adi, dosya_adi) == 0) {
-            printf("DEBUG: Yazma konumu: %d\n", d->baslangic_adresi);
-            printf("DEBUG: Yazılacak veri: '%s' (%d byte)\n", veri, boyut);
-            
             fseek(disk, d->baslangic_adresi, SEEK_SET);
-            long pos = ftell(disk);
-            printf("DEBUG: Güncel dosya konumu: %ld\n", pos);
-            
-            size_t yazilan = fwrite(veri, sizeof(char), boyut, disk);
-            printf("DEBUG: Yazılan byte sayısı: %zu / %d\n", yazilan, boyut);
+            fwrite(veri, sizeof(char), boyut, disk);
             fflush(disk);
 
             d->boyut = boyut;
@@ -129,10 +117,6 @@ void fs_read(const char* dosya_adi, int offset, int boyut, char* buffer) {
     for (int i = 0; i < metadata.dosya_sayisi; i++) {
         DosyaGirdisi* d = &metadata.dosyalar[i];
         if (d->aktif_mi && strcmp(d->dosya_adi, dosya_adi) == 0) {
-            printf("DEBUG: Dosya başlangıç adresi: %d\n", d->baslangic_adresi);
-            printf("DEBUG: Dosya boyutu: %d\n", d->boyut);
-            printf("DEBUG: Okuma offset: %d, boyut: %d\n", offset, boyut);
-            
             if (offset > d->boyut) {
                 printf("Offset dosya boyutunu aşıyor.\n");
                 fclose(disk);
@@ -142,21 +126,9 @@ void fs_read(const char* dosya_adi, int offset, int boyut, char* buffer) {
             if (offset + boyut > d->boyut)
                 boyut = d->boyut - offset;
 
-            printf("DEBUG: Düzeltilmiş okuma boyutu: %d\n", boyut);
-            
             fseek(disk, d->baslangic_adresi + offset, SEEK_SET);
-            long pos = ftell(disk);
-            printf("DEBUG: Okuma konumu: %ld\n", pos);
-            
-            size_t okunan = fread(buffer, sizeof(char), boyut, disk);
-            printf("DEBUG: Okunan byte sayısı: %zu\n", okunan);
+            fread(buffer, sizeof(char), boyut, disk);
             buffer[boyut] = '\0';
-
-            printf("DEBUG: Ham buffer içeriği (hex): ");
-            for (int j = 0; j < boyut; j++) {
-                printf("%02x ", (unsigned char)buffer[j]);
-            }
-            printf("\n");
 
             printf("Okunan veri: %s\n", buffer);
             fclose(disk);
