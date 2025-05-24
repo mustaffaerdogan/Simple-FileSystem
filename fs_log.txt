@@ -8,3 +8,46 @@
 [LOG #2] RESTORE yedek.sim
 [LOG #3] LIST (3 files)
 [LOG #4] FORMAT disk.sim
+[LOG #1] FORMAT disk.sim
+[LOG #2] CREATE rapor.txt
+[LOG #3] CREATE est.txt
+[LOG #4] LIST (2 files)
+[LOG #5] CREATE veri.txt
+[LOG #6] WRITE rapor.txt
+[LOG #7] READ rapor.txt(offset:0,size:16)
+[LOG #8] LIST (3 files)
+[LOG #9] WRITE veri.txt
+[LOG #10] LIST (3 files)
+[LOG #11] EXISTS rapor.txt
+[LOG #12] EXISTS veri.txt
+[LOG #13] SIZE rapor.txt(16 bytes)
+[LOG #14] APPEND veri.txt
+[LOG #15] DELETE rapor.txt
+[LOG #16] MOVE rapor.txt->veri.txt(16 bytes)
+[LOG #17] LIST (2 files)
+[LOG #18] READ veri.txt(offset:0,size:32)
+[LOG #19] CHECK_INTEGRITY (2 files, OK)
+[LOG #20] BACKUP yedek.sim
+[LOG #21] LIST (2 files)
+[LOG #22] LIST (2 files)
+[LOG #23] LIST (2 files)
+[LOG #24] LIST (2 files)
+[LOG #25] LIST (2 files)
+[LOG #26] LIST (2 files)
+[LOG #27] LIST (2 files)
+[LOG #28] LIST (2 files)
+[LOG #29] LIST (2 files)
+[LOG #30] LIST (2 files)
+[LOG #31] LIST (2 files)
+[LOG #32] CREATE rapor.txt
+[LOG #33] LIST (3 files)
+[LOG #34] EXISTS veri.txt
+[LOG #35] EXISTS rapor.txt
+[LOG #36] SIZE veri.txt(32 bytes)
+[LOG #37] APPEND rapor.txt
+[LOG #38] DELETE veri.txt
+[LOG #39] MOVE veri.txt->rapor.txt(32 bytes)
+[LOG #40] LIST (2 files)
+[LOG #41] LIST (2 files)
+[LOG #42] RESTORE yedek.sim
+[LOG #43] LIST (2 files)

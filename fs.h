@@ -34,6 +34,7 @@ void fs_rename(const char* eski_ad, const char* yeni_ad);
 void fs_append(const char* dosya_adi, const char* veri, int boyut);
 void fs_truncate(const char* dosya_adi, int yeni_boyut);
 void fs_copy(const char* kaynak_ad, const char* hedef_ad);
+void fs_move(const char* kaynak, const char* hedef);
 
 // Sistem seviyesi fonksiyonlar
 void fs_backup(const char* yedek_dosya_adi);

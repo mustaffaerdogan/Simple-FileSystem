@@ -28,6 +28,7 @@ int main() {
         printf("19. İki Dosyayı Karşılaştır (fs_diff)\n");
         printf("20. Diski Birleştir (fs_defragment)\n");
         printf("21. Logları Görüntüle (fs_log.txt içeriğini oku)\n");
+        printf("22. Dosyayı Taşı (fs_move)\n");
         printf("0. Çıkış\n");
         printf("Seçiminiz: ");
         scanf("%d", &secim);
@@ -201,6 +202,15 @@ int main() {
                 
                 fclose(log_dosyasi);
             }
+        }
+        else if (secim == 22) {
+            // Dosya taşıma işlemi
+            char kaynak[32], hedef[32];
+            printf("Taşınacak dosya adı: ");
+            scanf("%s", kaynak);
+            printf("Hedef dosya adı: ");
+            scanf("%s", hedef);
+            fs_move(kaynak, hedef);
         }
         else if (secim == 0) {
             printf("Çıkılıyor...\n");

@@ -910,3 +910,79 @@ void fs_log(const char* islem_adi, const char* hedef) {
     
     fclose(log_dosyasi);
 }
+
+void fs_move(const char* kaynak, const char* hedef) {
+    // Kaynak dosyanın var olup olmadığını kontrol et
+    if (!fs_exists(kaynak)) {
+        printf("Hata: Kaynak dosya '%s' bulunamadı.\n", kaynak);
+        return;
+    }
+
+    // Hedef dosyanın var olup olmadığını kontrol et
+    if (!fs_exists(hedef)) {
+        printf("Hata: Hedef dosya '%s' bulunamadı.\n", hedef);
+        return;
+    }
+
+    // Kaynak dosyanın boyutunu öğren
+    int kaynak_boyut = fs_size(kaynak);
+    if (kaynak_boyut <= 0) {
+        printf("Hata: Kaynak dosya '%s' boş veya okunamıyor.\n", kaynak);
+        return;
+    }
+
+    // Kaynak dosyanın içeriğini oku
+    char* buffer = malloc(kaynak_boyut);
+    if (!buffer) {
+        printf("Hata: Bellek tahsis edilemedi.\n");
+        return;
+    }
+
+    FILE* disk = fopen("disk.sim", "rb");
+    if (!disk) {
+        printf("Hata: disk.sim dosyası açılamadı.\n");
+        free(buffer);
+        return;
+    }
+
+    Metadata metadata;
+    fread(&metadata, sizeof(Metadata), 1, disk);
+
+    // Kaynak dosyayı bul ve içeriğini oku
+    int kaynak_bulundu = 0;
+    for (int i = 0; i < metadata.dosya_sayisi; i++) {
+        if (metadata.dosyalar[i].aktif_mi && 
+            strcmp(metadata.dosyalar[i].dosya_adi, kaynak) == 0) {
+            
+            // Dosya içeriğini oku
+            fseek(disk, metadata.dosyalar[i].baslangic_adresi, SEEK_SET);
+            fread(buffer, sizeof(char), kaynak_boyut, disk);
+            kaynak_bulundu = 1;
+            break;
+        }
+    }
+    fclose(disk);
+
+    if (!kaynak_bulundu) {
+        printf("Hata: Kaynak dosya '%s' okunamadı.\n", kaynak);
+        free(buffer);
+        return;
+    }
+
+    // Hedef dosyaya içeriği ekle
+    fs_append(hedef, buffer, kaynak_boyut);
+
+    // Kaynak dosyayı sil
+    fs_delete(kaynak);
+
+    // Belleği temizle
+    free(buffer);
+
+    printf("'%s' dosyası '%s' dosyasının sonuna taşındı (%d byte).\n", 
+           kaynak, hedef, kaynak_boyut);
+
+    // Loglama işlemi
+    char log_mesaji[128];
+    snprintf(log_mesaji, sizeof(log_mesaji), "%s->%s(%d bytes)", kaynak, hedef, kaynak_boyut);
+    fs_log("MOVE", log_mesaji);
+}
