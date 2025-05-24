@@ -21,6 +21,9 @@ int main() {
         printf("12. Dosyaya veri ekle (append)\n");
         printf("13. Dosya içeriğini kes (truncate)\n");
         printf("14. Dosyayı kopyala\n");
+        printf("15. Disk Yedeğini Al (fs_backup)\n");
+        printf("16. Yedekten Geri Yükle (fs_restore)\n");
+        printf("17. Disk Tutarlılığını Kontrol Et (fs_check_integrity)\n");
         printf("0. Çıkış\n");
         printf("Seçiminiz: ");
         scanf("%d", &secim);
@@ -115,6 +118,32 @@ int main() {
             printf("Hedef dosya adı: ");
             scanf("%s", hedef);
             fs_copy(kaynak, hedef);
+        }
+        else if (secim == 15) {
+            // Disk yedekleme işlemi
+            char yedek_dosya[64];
+            printf("Yedek dosya adı (örn: backup.sim): ");
+            scanf("%s", yedek_dosya);
+            fs_backup(yedek_dosya);
+        }
+        else if (secim == 16) {
+            // Diskten geri yükleme işlemi
+            char yedek_dosya[64];
+            printf("Geri yüklenecek yedek dosya adı: ");
+            scanf("%s", yedek_dosya);
+            printf("DİKKAT: Mevcut disk.sim dosyası tamamen silinecek! Devam etmek istiyor musunuz? (e/h): ");
+            char onay;
+            scanf(" %c", &onay);
+            
+            if (onay == 'e' || onay == 'E') {
+                fs_restore(yedek_dosya);
+            } else {
+                printf("Geri yükleme işlemi iptal edildi.\n");
+            }
+        }
+        else if (secim == 17) {
+            // Disk tutarlılık kontrolü
+            fs_check_integrity();
         }
         else if (secim == 0) {
             printf("Çıkılıyor...\n");

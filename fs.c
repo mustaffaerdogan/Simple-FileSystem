@@ -408,3 +408,133 @@ void fs_copy(const char* kaynak_ad, const char* hedef_ad) {
     printf("'%s' dosyası '%s' olarak kopyalandı (%d byte).\n", 
            kaynak_ad, hedef_ad, kaynak_boyut);
 }
+
+void fs_backup(const char* yedek_dosya_adi) {
+    // Kaynak dosyayı okuma modunda aç
+    FILE* kaynak = fopen("disk.sim", "rb");
+    if (!kaynak) {
+        printf("Hata: disk.sim dosyası açılamadı.\n");
+        return;
+    }
+
+    // Hedef yedek dosyayı yazma modunda aç
+    FILE* hedef = fopen(yedek_dosya_adi, "wb");
+    if (!hedef) {
+        printf("Hata: Yedek dosyası oluşturulamadı.\n");
+        fclose(kaynak);
+        return;
+    }
+
+    // Dosyayı blok blok kopyala
+    char buffer[BLOCK_SIZE];
+    size_t okunan;
+    int toplam_byte = 0;
+
+    while ((okunan = fread(buffer, 1, BLOCK_SIZE, kaynak)) > 0) {
+        fwrite(buffer, 1, okunan, hedef);
+        toplam_byte += okunan;
+    }
+
+    fflush(hedef);
+    fclose(kaynak);
+    fclose(hedef);
+
+    printf("Disk yedeği başarıyla alındı: '%s' (%d byte)\n", yedek_dosya_adi, toplam_byte);
+}
+
+void fs_restore(const char* yedek_dosya_adi) {
+    // Yedek dosyayı okuma modunda aç
+    FILE* kaynak = fopen(yedek_dosya_adi, "rb");
+    if (!kaynak) {
+        printf("Hata: Yedek dosyası '%s' bulunamadı.\n", yedek_dosya_adi);
+        return;
+    }
+
+    // Mevcut disk.sim dosyasını yazma modunda aç (üzerine yaz)
+    FILE* hedef = fopen("disk.sim", "wb");
+    if (!hedef) {
+        printf("Hata: disk.sim dosyası oluşturulamadı.\n");
+        fclose(kaynak);
+        return;
+    }
+
+    // Yedek dosyayı disk.sim'e blok blok kopyala
+    char buffer[BLOCK_SIZE];
+    size_t okunan;
+    int toplam_byte = 0;
+
+    while ((okunan = fread(buffer, 1, BLOCK_SIZE, kaynak)) > 0) {
+        fwrite(buffer, 1, okunan, hedef);
+        toplam_byte += okunan;
+    }
+
+    fflush(hedef);
+    fclose(kaynak);
+    fclose(hedef);
+
+    printf("Disk başarıyla geri yüklendi: '%s'den %d byte geri yüklendi\n", yedek_dosya_adi, toplam_byte);
+}
+
+void fs_check_integrity() {
+    FILE* disk = fopen("disk.sim", "rb");
+    if (!disk) {
+        printf("Hata: disk.sim dosyası açılamadı.\n");
+        return;
+    }
+
+    Metadata metadata;
+    fread(&metadata, sizeof(Metadata), 1, disk);
+    fclose(disk);
+
+    printf("\n=== Disk Tutarlılık Kontrolü ===\n");
+    printf("Toplam dosya sayısı: %d\n", metadata.dosya_sayisi);
+
+    int aktif_dosya_sayisi = 0;
+    int hata_var = 0;
+
+    // Her aktif dosyayı kontrol et
+    for (int i = 0; i < metadata.dosya_sayisi; i++) {
+        DosyaGirdisi* d = &metadata.dosyalar[i];
+        
+        if (d->aktif_mi) {
+            aktif_dosya_sayisi++;
+            
+            // Dosya sınırlarının 1MB'ı aşıp aşmadığını kontrol et
+            int dosya_sonu = d->baslangic_adresi + d->boyut;
+            if (dosya_sonu > 1048576) {
+                printf("HATA: '%s' dosyası disk sınırlarını aşıyor (başlangıç: %d, boyut: %d, son: %d)\n", 
+                       d->dosya_adi, d->baslangic_adresi, d->boyut, dosya_sonu);
+                hata_var = 1;
+            }
+
+            // Diğer aktif dosyalarla çakışma kontrolü
+            for (int j = i + 1; j < metadata.dosya_sayisi; j++) {
+                DosyaGirdisi* diger = &metadata.dosyalar[j];
+                
+                if (diger->aktif_mi) {
+                    int d_baslangic = d->baslangic_adresi;
+                    int d_bitis = d->baslangic_adresi + d->boyut;
+                    int diger_baslangic = diger->baslangic_adresi;
+                    int diger_bitis = diger->baslangic_adresi + diger->boyut;
+
+                    // Çakışma kontrolü: iki dosya aralığının kesişip kesişmediğini kontrol et
+                    if ((d_baslangic < diger_bitis) && (diger_baslangic < d_bitis)) {
+                        printf("HATA: Dosya çakışması bulundu!\n");
+                        printf("  '%s': %d-%d arası\n", d->dosya_adi, d_baslangic, d_bitis-1);
+                        printf("  '%s': %d-%d arası\n", diger->dosya_adi, diger_baslangic, diger_bitis-1);
+                        hata_var = 1;
+                    }
+                }
+            }
+        }
+    }
+
+    printf("Aktif dosya sayısı: %d\n", aktif_dosya_sayisi);
+    
+    if (hata_var) {
+        printf("❌ Disk tutarlılık hataları bulundu!\n");
+    } else {
+        printf("✅ Tüm dosyalar tutarlı\n");
+    }
+    printf("=============================\n");
+}

@@ -35,4 +35,9 @@ void fs_append(const char* dosya_adi, const char* veri, int boyut);
 void fs_truncate(const char* dosya_adi, int yeni_boyut);
 void fs_copy(const char* kaynak_ad, const char* hedef_ad);
 
+// Sistem seviyesi fonksiyonlar
+void fs_backup(const char* yedek_dosya_adi);
+void fs_restore(const char* yedek_dosya_adi);
+void fs_check_integrity();
+
 #endif
